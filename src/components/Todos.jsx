@@ -6,19 +6,12 @@ import "./Todos.css";
 
 const ADD = "ADD";
 const UPDATE = "UPDATE";
+const DELETE = "DELETE";
+const DELETE_ALL = "DELETE_ALL";
+const DELETE_DONE = "DELETE_DONE";
+const COMPLETE = "COMPLETE";
+const FILTER = "FILTER";
 
-// const initialTodos = [
-//     {
-//         id: 1,
-//         title: "Todo 1",
-//         complete: false,
-//     },
-//     {
-//         id: 2,
-//         title: "Todo 2",
-//         complete: false,
-//     },
-// ];
 const initialTodos = [];
 
 const reducer = (state, action) => {
@@ -27,77 +20,55 @@ const reducer = (state, action) => {
       return [action.todo, ...state];
 
     case UPDATE:
-      console.log("UPDATE");
-      return;
+      return state.map((todo) =>
+        todo.id === action.id ? { ...todo, title: action.newTitle } : todo
+      );
 
-    case "DELETE":
+    case DELETE:
       return state.filter((s) => s.id !== action.id);
 
-    case "DELETE_ALL":
+    case DELETE_ALL:
       return [];
 
-    case "DELETE_DONE":
-      console.log("DELETE_DONE");
-      return;
+    case DELETE_DONE:
+      return state.filter((todo) => !todo.complete);
 
-    case "COMPLETE":
-      // console.log("COMPLETE");
+    case COMPLETE:
       return state.map((todo) =>
         todo.id === action.id ? { ...todo, complete: !todo.complete } : todo
       );
-    // return state.map((todo) => {
-    //     if (todo.id === action.id) {
-    //         return { ...todo, complete: !todo.complete };
-    //     } else {
-    //         return todo;
-    //     }
-    // });
-    case "FILTER":
-      console.log({ state, action });
-      if (action.filter === "ALL") {
-        console.log("ALL");
-        return action.copiedTodos;
-      } else if (action.filter === "DONE") {
-        console.log("DONE");
-        return action.copiedTodos.filter((todo) => todo.complete);
-      } else if (action.filter === "UNDONE") {
-        console.log("UNDONE");
-        return action.copiedTodos.filter((todo) => !todo.complete);
+
+    case FILTER:
+      switch (action.filter) {
+        case "ALL":
+          return [...action.originalTodos];
+        case "DONE":
+          return action.originalTodos.filter((todo) => todo.complete);
+        case "UNDONE":
+          return action.originalTodos.filter((todo) => !todo.complete);
+        default:
+          return state;
       }
-    // if (action.filter === "ALL") {
-    //     console.log("ALL");
-    //     return state;
-    // } else if (action.filter === "DONE") {
-    //     console.log("DONE");
-    //     return state.filter((todo) => todo.complete)
-    // } else if (action.filter === "UNDONE") {
-    //     console.log("UNDONE");
-    //     return state.filter((todo) => !todo.complete)
-    // }
 
     default:
       return state;
   }
 };
-let copiedTodos = [];
+
 export const Todos = () => {
   const [todos, dispatch] = useReducer(reducer, initialTodos);
   const titleInputRef = useRef();
-  const [action, setAction] = useState(0);
-  // const copiedTodos = [...todos];
+  const [editing, setEditing] = useState(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [originalTodos, setOriginalTodos] = useState([]);
 
   useEffect(() => {
-    console.log({ action, todos });
-    copiedTodos = [...todos];
-  }, [action]);
-
-  console.log("todos: ", todos, copiedTodos);
+    setOriginalTodos([...todos]);
+  }, [todos]);
 
   const handleAdd = (event) => {
     event.preventDefault();
     if (titleInputRef.current.value) {
-      // setAction(1)
-      setAction(Math.random() * 100);
       const todo = {
         id: todos.length + 1,
         title: titleInputRef.current.value,
@@ -110,53 +81,50 @@ export const Todos = () => {
     }
   };
 
-  const handleUpdate = (todo) => {
-    // setAction(2);
-    setAction(Math.random() * 100);
-    dispatch({ type: UPDATE, id: todo.id });
+  const handleUpdate = (id) => {
+    if (newTitle.trim()) {
+      dispatch({ type: UPDATE, id, newTitle });
+      setEditing(null);
+      setNewTitle("");
+    } else {
+      alert("Please enter a new title!");
+    }
   };
 
   const handleDelete = (id) => {
-    // setAction(3);
-    setAction(Math.random() * 100);
-    console.log("id:", id);
-    dispatch({ type: "DELETE", id: id });
+    dispatch({ type: DELETE, id });
   };
 
   const handleDeleteAll = () => {
-    // setAction(4);
-    setAction(Math.random() * 100);
     const isAllowDelete = window.confirm(
       "Are you sure? You want to delete all todos? This action can't be undone!"
     );
-    console.log("isAllowDelete: ", isAllowDelete);
     if (isAllowDelete) {
-      dispatch({ type: "DELETE_ALL" });
+      dispatch({ type: DELETE_ALL });
     }
   };
 
   const handleDeleteDone = () => {
-    // setAction(5);
-    setAction(Math.random() * 100);
-    dispatch({ type: "DELETE_DONE" });
+    dispatch({ type: DELETE_DONE });
   };
 
   const handleFilter = (selectedFilter) => {
-    // setAction(6);
-    setAction(Math.random() * 100);
-    dispatch({ type: "FILTER", filter: selectedFilter, copiedTodos });
+    dispatch({ type: FILTER, filter: selectedFilter, originalTodos });
   };
 
-  // const handleComplete = (todo) => {
-  //     // console.log(todo, "todo");
-  //     dispatch({ type: "COMPLETE", id: todo.id });
-  // };
-
   const handleComplete = (id) => {
-    // setAction(7);
-    setAction(Math.random() * 100);
-    // console.log(todo, "todo");
-    dispatch({ type: "COMPLETE", id: id });
+    dispatch({ type: COMPLETE, id });
+  };
+
+  const handleEdit = (todo) => {
+    setEditing(todo.id);
+    setNewTitle(todo.title);
+  };
+
+  const handleKeyDown = (e, id) => {
+    if (e.key === "Enter") {
+      handleUpdate(id);
+    }
   };
 
   return (
@@ -195,53 +163,58 @@ export const Todos = () => {
           </button>
         </div>
         {todos.length > 0 ? (
-          todos.map((todo, index) => {
-            // console.log(todo, "todo");
-            const doneTodoStyle = {
-              textDecoration: "line-through",
-              color: "red",
-            };
-            return (
-              <div
-                key={todo.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  border: "1px solid gray",
-                  padding: "0.5rem",
-                  borderRadius: "0.5rem",
-                }}
-              >
-                <label style={{ ...(todo.complete && doneTodoStyle) }}>
-                  {index + 1} - {todo.title} - {todo.id}
+          todos.map((todo) => (
+            <div
+              key={todo.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                border: "1px solid gray",
+                padding: "0.5rem",
+                borderRadius: "0.5rem",
+              }}
+            >
+              {editing === todo.id ? (
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, todo.id)}
+                />
+              ) : (
+                <label style={{ ...(todo.complete && { textDecoration: "line-through", color: "red" }) }}>
+                  {todo.title}
                 </label>
-
-                <div>
-                  <input
-                    style={{ accentColor: "yellowgreen" }}
-                    type="checkbox"
-                    checked={todo.complete}
-                    onChange={() => handleComplete(todo.id)}
-                  />
+              )}
+              <div>
+                <input
+                  style={{ accentColor: "yellowgreen" }}
+                  type="checkbox"
+                  checked={todo.complete}
+                  onChange={() => handleComplete(todo.id)}
+                />
+                {editing === todo.id ? (
+                  <button onClick={() => handleUpdate(todo.id)}>Save</button>
+                ) : (
                   <BiEditAlt
                     color="orange"
                     size={15}
                     style={{ cursor: "pointer" }}
-                    onClick={() => handleUpdate(todo.id)}
+                    onClick={() => handleEdit(todo)}
                   />
-                  <BiSolidTrashAlt
-                    color="red"
-                    size={15}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => handleDelete(todo.id)}
-                  />
-                </div>
+                )}
+                <BiSolidTrashAlt
+                  color="red"
+                  size={15}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => handleDelete(todo.id)}
+                />
               </div>
-            );
-          })
+            </div>
+          ))
         ) : (
-          <h1>No todo's added yet, please add some from above form!</h1>
+          <h1>No todos added yet, please add some using the form above!</h1>
         )}
       </section>
     </>

@@ -38,18 +38,6 @@ const reducer = (state, action) => {
         todo.id === action.id ? { ...todo, complete: !todo.complete } : todo
       );
 
-    case FILTER:
-      switch (action.filter) {
-        case "ALL":
-          return [...action.originalTodos];
-        case "DONE":
-          return action.originalTodos.filter((todo) => todo.complete);
-        case "UNDONE":
-          return action.originalTodos.filter((todo) => !todo.complete);
-        default:
-          return state;
-      }
-
     default:
       return state;
   }
@@ -60,11 +48,7 @@ export const Todos = () => {
   const titleInputRef = useRef();
   const [editing, setEditing] = useState(null);
   const [newTitle, setNewTitle] = useState("");
-  const [originalTodos, setOriginalTodos] = useState([]);
-
-  useEffect(() => {
-    setOriginalTodos([...todos]);
-  }, [todos]);
+  const [filter, setFilter] = useState("ALL");
 
   const handleAdd = (event) => {
     event.preventDefault();
@@ -108,10 +92,6 @@ export const Todos = () => {
     dispatch({ type: DELETE_DONE });
   };
 
-  const handleFilter = (selectedFilter) => {
-    dispatch({ type: FILTER, filter: selectedFilter, originalTodos });
-  };
-
   const handleComplete = (id) => {
     dispatch({ type: COMPLETE, id });
   };
@@ -126,6 +106,16 @@ export const Todos = () => {
       handleUpdate(id);
     }
   };
+
+  const handleFilter = (selectedFilter) => {
+    setFilter(selectedFilter);
+  };
+
+  const filteredTodos = todos.filter((todo) => {
+    if (filter === "DONE") return todo.complete;
+    if (filter === "UNDONE") return !todo.complete;
+    return true; // for "ALL"
+  });
 
   return (
     <>
@@ -162,18 +152,11 @@ export const Todos = () => {
             Undone
           </button>
         </div>
-        {todos.length > 0 ? (
-          todos.map((todo) => (
+        {filteredTodos.length > 0 ? (
+          filteredTodos.map((todo) => (
             <div
               key={todo.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: "1px solid gray",
-                padding: "0.5rem",
-                borderRadius: "0.5rem",
-              }}
+              className="todo-item"
             >
               {editing === todo.id ? (
                 <input
